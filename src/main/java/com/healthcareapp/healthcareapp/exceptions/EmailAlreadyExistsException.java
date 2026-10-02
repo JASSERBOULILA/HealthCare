@@ -1,0 +1,5 @@
+package com.healthcareapp.healthcareapp.exceptions;
+
+public class EmailAlreadyExistsException extends RuntimeException {
+    public EmailAlreadyExistsException(String message) { super(message); }
+}
