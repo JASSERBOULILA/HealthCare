@@ -23,7 +23,9 @@ public class Worker {
 
     private String employeeNumber;
 
-    private String department;
+    @OneToOne
+    @JoinColumn(name = "department_id" ,  nullable = false)
+    private Departments department;
 
     private String jobTitle;
 

@@ -5,6 +5,7 @@ import com.healthcareapp.healthcareapp.DTO.UserResponse;
 import com.healthcareapp.healthcareapp.DTO.Worker.WorkerCreateRequest;
 import com.healthcareapp.healthcareapp.DTO.Worker.WorkerResponse;
 import com.healthcareapp.healthcareapp.DTO.Worker.WorkerUpdateRequest;
+import com.healthcareapp.healthcareapp.models.Departments;
 import com.healthcareapp.healthcareapp.models.User;
 import com.healthcareapp.healthcareapp.models.Worker;
 import com.healthcareapp.healthcareapp.services.UserService;
@@ -54,11 +55,11 @@ public class AdminController {
     }
 
     // POST /admin/workers
-    @PostMapping("/workers")
+    @PostMapping("/workers/{departmentId}")
     public ResponseEntity<WorkerResponse> createWorker(
-            @Valid @RequestBody WorkerCreateRequest request) {
+            @Valid @RequestBody WorkerCreateRequest request , @PathVariable Long departmentId) {
 
-        Worker worker = workerService.createWorker(request);
+        Worker worker = workerService.createWorker(request , departmentId);
 
         if (worker == null) {
             throw new IllegalStateException(
@@ -81,12 +82,13 @@ public class AdminController {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body("the worker " + oneWorker.getUser().getFirstName() + oneWorker.getUser().getLastName() + " has been deleted");
     }
 
-    @PatchMapping("/update/worker/{id}")
+    @PatchMapping("/update/worker/{id}/{departmentId}")
     public ResponseEntity<WorkerResponse> updateWorker(
             @Valid @RequestBody WorkerUpdateRequest request,
-            @PathVariable Long id
+            @PathVariable Long id,
+            @PathVariable Departments departmentId
     ) {
-        Worker worker = workerService.updateWorker(id, request);
+        Worker worker = workerService.updateWorker(id, request , departmentId);
 
         return ResponseEntity.ok(WorkerResponse.from(worker));
     }

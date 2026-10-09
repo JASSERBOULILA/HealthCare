@@ -1,14 +1,16 @@
 package com.healthcareapp.healthcareapp.DTO.Worker;
 
+import jakarta.validation.Valid;
+import org.jspecify.annotations.NonNull;
+
 import java.time.LocalDate;
 
 public record WorkerCreateRequest(
-        Long user_id,
-        String employeeNumber,
-        String department,
-        String jobTitle,
-        LocalDate hireDate,
-        String phone
+        @NonNull @Valid Long user_id,
+        @NonNull @Valid String employeeNumber,
+        @NonNull @Valid String jobTitle,
+        @NonNull @Valid LocalDate hireDate,
+        @NonNull @Valid String phone
 
 ) {
 

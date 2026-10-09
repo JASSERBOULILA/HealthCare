@@ -24,10 +24,11 @@ public class WorkerController {
     private WorkerService workerService;
 
 
-    @PostMapping("/create")
-    public ResponseEntity<WorkerResponse> addWorker(@Valid @RequestBody WorkerCreateRequest request) {
+    @PostMapping("/create/{departmentId}")
+    public ResponseEntity<WorkerResponse> addWorker(@Valid @RequestBody WorkerCreateRequest request,
+                                                    @PathVariable Long departmentId) {
 
-    Worker worker = workerService.createWorker(request);
+    Worker worker = workerService.createWorker(request, departmentId);
 
     return ResponseEntity.status(HttpStatus.CREATED).body(WorkerResponse.from(worker));
 

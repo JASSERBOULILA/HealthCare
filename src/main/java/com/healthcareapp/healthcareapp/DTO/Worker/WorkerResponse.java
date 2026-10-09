@@ -1,5 +1,6 @@
 package com.healthcareapp.healthcareapp.DTO.Worker;
 
+import com.healthcareapp.healthcareapp.models.Departments;
 import com.healthcareapp.healthcareapp.models.User;
 import com.healthcareapp.healthcareapp.models.Worker;
 
@@ -14,7 +15,7 @@ public record WorkerResponse(
         String role,
 
         String employeeNumber,
-        String department,
+        Departments department,
         String jobTitle,
         LocalDate hireDate,
         String phone,

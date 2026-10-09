@@ -4,25 +4,31 @@ package com.healthcareapp.healthcareapp.services.profiles;
 import com.healthcareapp.healthcareapp.DTO.Worker.WorkerCreateRequest;
 import com.healthcareapp.healthcareapp.DTO.Worker.WorkerResponse;
 import com.healthcareapp.healthcareapp.DTO.Worker.WorkerUpdateRequest;
+import com.healthcareapp.healthcareapp.Repository.DepartmentRepository;
 import com.healthcareapp.healthcareapp.Repository.UserRepository;
 import com.healthcareapp.healthcareapp.Repository.WorkerRepository;
 import com.healthcareapp.healthcareapp.exceptions.ResourceNotFoundException;
+import com.healthcareapp.healthcareapp.models.Departments;
 import com.healthcareapp.healthcareapp.models.User;
 import com.healthcareapp.healthcareapp.models.Worker;
+import com.healthcareapp.healthcareapp.services.DepartmentService;
 import jakarta.transaction.Transactional;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class WorkerService {
 
     private final WorkerRepository workerRepository;
     private final UserRepository userRepository;
-    public WorkerService(WorkerRepository workerRepository, UserRepository userRepository) {
+    private final DepartmentService departmentService;
+    public WorkerService(WorkerRepository workerRepository, UserRepository userRepository, DepartmentService departmentService) {
         this.workerRepository = workerRepository;
         this.userRepository = userRepository;
+        this.departmentService = departmentService;
     };
 
 
@@ -35,17 +41,17 @@ public class WorkerService {
                 )-> new ResourceNotFoundException("Worker with id: " + id + " not found"));
     };
 
-    public Worker createWorker(@NonNull WorkerCreateRequest request) {
-
+    public Worker createWorker(@NonNull WorkerCreateRequest request , Long departmentId) {
         User user = userRepository.findById(request.user_id())
                 .orElseThrow(() ->
                         new RuntimeException("User not found")
                 );
-
+        // check if the department there
+        Optional<Departments> department = departmentService.findById(departmentId);
         Worker worker = new Worker();
         worker.setUser(user);
         worker.setEmployeeNumber(request.employeeNumber());
-        worker.setDepartment(request.department());
+        department.ifPresent(worker::setDepartment);
         worker.setJobTitle(request.jobTitle());
         worker.setHireDate(request.hireDate());
         worker.setPhone(request.phone());
@@ -55,7 +61,7 @@ public class WorkerService {
     }
 
     @Transactional
-    public Worker updateWorker(Long id, WorkerUpdateRequest request) {
+    public Worker updateWorker(Long id, WorkerUpdateRequest request , Departments department) {
 
         Worker worker = workerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -67,7 +73,7 @@ public class WorkerService {
         }
 
         if (request.department() != null) {
-            worker.setDepartment(request.department());
+            worker.setDepartment(department);
         }
 
         if (request.jobTitle() != null) {
