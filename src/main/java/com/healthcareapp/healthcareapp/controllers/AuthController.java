@@ -10,6 +10,7 @@ import com.healthcareapp.healthcareapp.services.AuthService;
 import com.healthcareapp.healthcareapp.services.JwtService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,9 +26,13 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
+    @Autowired
     private final AuthService authService;
+    @Autowired
     private final AuthenticationManager authenticationManager;
+    @Autowired
     private final JwtService jwtService;
+    @Autowired
     private final UserRepository userRepository;
 
 

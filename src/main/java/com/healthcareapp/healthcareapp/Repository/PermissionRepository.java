@@ -12,4 +12,5 @@ public interface PermissionRepository
         extends JpaRepository<Permission, Long> {
 
     Optional<Permission> findByName(String name);
+    boolean existsByNameIgnoreCase(String name);
 }
