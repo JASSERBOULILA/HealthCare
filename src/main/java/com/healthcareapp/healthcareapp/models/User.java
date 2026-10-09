@@ -19,10 +19,6 @@ public class User {
     private String firstName;
     private String lastName;
 
-    public enum Role {
-        PATIENT, DOCTOR, ADMIN
-    }
-
     @Email
     @Column(unique = true, nullable = false)
     private String email;
@@ -30,8 +26,10 @@ public class User {
     @JsonIgnore // never serialize the hash, even by accident
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role = Role.PATIENT;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Roles role;
+
+    
 
 }

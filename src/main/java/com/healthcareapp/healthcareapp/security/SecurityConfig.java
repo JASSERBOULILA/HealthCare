@@ -17,6 +17,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.HttpStatusAccessDeniedHandler;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -27,7 +28,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // enables @PreAuthorize
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -36,53 +37,206 @@ public class SecurityConfig {
     @Value("${app.frontend-origin}")
     private String frontendOrigin;
 
+
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http)
+            throws Exception {
+
         http
+                // -------------------------
+                // CORS
+                // -------------------------
                 .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable()) // OK here because of SameSite cookie, see note below
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/signup", "/auth/signin").permitAll()
-                        .requestMatchers("/auth/me", "/auth/signout").authenticated()
 
-                        .requestMatchers(HttpMethod.GET, "/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/users/**").hasRole("ADMIN")
-                        // GET /users/{id} is handled with @PreAuthorize (self or admin)
+                // -------------------------
+                // CSRF
+                // -------------------------
+                .csrf(csrf -> csrf.disable())
 
-                        .requestMatchers("/doctors/**").hasAnyRole("DOCTOR", "ADMIN")
-                        .requestMatchers("/patients/**").hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
-
-                        .anyRequest().authenticated() // deny-by-default: everything else needs login
+                // -------------------------
+                // Stateless JWT authentication
+                // -------------------------
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
                 )
-                .exceptionHandling(e -> e
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+                // -------------------------
+                // Authorization rules
+                // -------------------------
+                .authorizeHttpRequests(auth -> auth
+
+                        // Public authentication endpoints
+                        .requestMatchers(
+                                "/auth/signup",
+                                "/auth/signin"
+                        )
+                        .permitAll()
+
+
+                        // Must be logged in
+                        .requestMatchers(
+                                "/auth/me",
+                                "/auth/signout"
+                        )
+                        .authenticated()
+
+
+                        // -------------------------
+                        // USERS
+                        // -------------------------
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/users"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/users"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/users/**"
+                        )
+                        .hasRole("ADMIN")
+
+
+                        // -------------------------
+                        // WORKERS
+                        // -------------------------
+
+                        .requestMatchers(
+                                "/worker/**"
+                        )
+                        .hasAnyRole(
+                                "DOCTOR",
+                                "ADMIN"
+                        )
+
+
+                        // Everything else requires login
+                        .anyRequest()
+                        .authenticated()
+                )
+
+                // -------------------------
+                // 401 / 403 handling
+                // -------------------------
+                .exceptionHandling(exception -> exception
+
+                        // 401 - user is not logged in / invalid JWT
+                        .authenticationEntryPoint((request, response, authException) -> {
+
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType("application/json");
+
+                            response.getWriter().write("""
+                    {
+                        "status": 401,
+                        "error": "Unauthorized",
+                        "message": "You must sign in before accessing this resource."
+                    }
+                    """);
+                        })
+
+                        // 403 - user is logged in but does not have permission
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+
+                            response.setStatus(HttpStatus.FORBIDDEN.value());
+                            response.setContentType("application/json");
+
+                            response.getWriter().write("""
+                    {
+                        "status": 403,
+                        "error": "Forbidden",
+                        "message": "You do not have permission to access this resource."
+                    }
+                    """);
+                        })
+                )
+
+                // -------------------------
+                // JWT filter
+                // -------------------------
+                .addFilterBefore(
+                        jwtAuthFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }
+
+
+    // -------------------------
+    // PASSWORD ENCODER
+    // -------------------------
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+
+    // -------------------------
+    // AUTHENTICATION MANAGER
+    // -------------------------
+
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config
+    ) throws Exception {
+
         return config.getAuthenticationManager();
     }
 
+
+    // -------------------------
+    // CORS CONFIGURATION
+    // -------------------------
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of(frontendOrigin));   // must be explicit, not "*"
-        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("Content-Type"));
-        cfg.setAllowCredentials(true);                    // required for cookies
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", cfg);
+        CorsConfiguration config =
+                new CorsConfiguration();
+
+        config.setAllowedOrigins(
+                List.of(frontendOrigin)
+        );
+
+        config.setAllowedMethods(
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "DELETE",
+                        "OPTIONS"
+                )
+        );
+
+        config.setAllowedHeaders(
+                List.of(
+                        "Content-Type",
+                        "Authorization"
+                )
+        );
+
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration(
+                "/**",
+                config
+        );
+
         return source;
     }
 }
