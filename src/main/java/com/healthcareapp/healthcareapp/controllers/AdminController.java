@@ -4,6 +4,7 @@ package com.healthcareapp.healthcareapp.controllers;
 import com.healthcareapp.healthcareapp.DTO.UserResponse;
 import com.healthcareapp.healthcareapp.DTO.Worker.WorkerCreateRequest;
 import com.healthcareapp.healthcareapp.DTO.Worker.WorkerResponse;
+import com.healthcareapp.healthcareapp.DTO.Worker.WorkerUpdateRequest;
 import com.healthcareapp.healthcareapp.models.User;
 import com.healthcareapp.healthcareapp.models.Worker;
 import com.healthcareapp.healthcareapp.services.UserService;
@@ -79,5 +80,15 @@ public class AdminController {
         workerService.deleteWorker(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body("the worker " + oneWorker.getUser().getFirstName() + oneWorker.getUser().getLastName() + " has been deleted");
     }
-    
+
+    @PatchMapping("/update/worker/{id}")
+    public ResponseEntity<WorkerResponse> updateWorker(
+            @Valid @RequestBody WorkerUpdateRequest request,
+            @PathVariable Long id
+    ) {
+        Worker worker = workerService.updateWorker(id, request);
+
+        return ResponseEntity.ok(WorkerResponse.from(worker));
+    }
+
 }
